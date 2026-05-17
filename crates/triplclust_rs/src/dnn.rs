@@ -2,6 +2,9 @@ use kiddo::{ImmutableKdTree, SquaredEuclidean};
 use numpy::ndarray::ArrayView2;
 use std::num::NonZero;
 
+/// Calculate the mean squared distance between a point and its
+/// nearest neighbors. The distance from the point to itself is
+/// excluded from the mean.
 pub fn mean_sq_distance(explicit_cloud: Vec<[f64; 3]>, neighbors: NonZero<usize>) -> Vec<f64> {
     let tree = ImmutableKdTree::<f64, 3>::new_from_slice(&explicit_cloud);
     let mut msd = vec![0.0; explicit_cloud.len()];
@@ -21,6 +24,11 @@ pub fn mean_sq_distance(explicit_cloud: Vec<[f64; 3]>, neighbors: NonZero<usize>
     return msd;
 }
 
+/// Caculate the characteristic length, dNN, from the first quartile
+/// of the mean squared distances of point-neighborhoods.
+///
+/// dNN in this case refers to the variable of the same name in the Dalitz
+/// paper.
 pub fn dnn_first_quartile(cloud: &ArrayView2<f64>) -> f64 {
     let explicit_layout: Vec<[f64; 3]> = cloud
         .rows()

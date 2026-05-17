@@ -3,6 +3,12 @@ use super::params::SmoothParams;
 use kiddo::{ImmutableKdTree, SquaredEuclidean};
 use numpy::ndarray::{Array2, ArrayView2, array, s};
 
+/// Smooth a 3D point cloud using nearest neighbors.
+///
+/// Search for the neearest neighbors of each point within a given distance radius
+/// and then average the position of those points.
+///
+/// Returns a new, smoothed point cloud of the same dimensions as the original.
 pub fn smooth_pointcloud(
     cloud: &ArrayView2<f64>,
     params: &SmoothParams,
