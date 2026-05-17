@@ -1,3 +1,4 @@
+//! Clustering algorithms and results
 use super::error::{ClusterError, TriplclustError};
 use super::params::ClusterParams;
 use super::triplet::{Triplet, triplet_metric};
@@ -5,14 +6,35 @@ use kodama::{Dendrogram, Step, linkage};
 use numpy::ndarray::Array1;
 use rustc_hash::{FxHashMap, FxHashSet};
 
+/// The result of the clustering
+///
+/// Note that there are some differences here to the original triplclust implementation
+/// One of the quirks of this clustering method is that there are many more triplets than
+/// original points. This makes it likely that some points will be in triplets in different
+/// clusters. Thus there arises an ambiguity when translating triplet cluster labels to
+/// point labels.
+///
+/// In the original, each point was allowed to have multiple cluster labels assigned. No
+/// attempt was made to disentangle overlaps.
+///
+/// In triplclust_rs we use a basic metric to determine which cluster is more accurate for
+/// a point where there is overlap. We count the number of times each label is given to a
+/// specific point. The label which occurs the most is the true label.
 pub struct ClusterResult {
+    /// A list of the unique label values present in the result
     pub unique_labels: Array1<i32>,
+    /// The array of labels, one for each point in the point cloud
     pub labels: Array1<i32>,
+    /// A count of the number of clusters rejected due to size limits
     pub n_clusters_removed: usize,
+    /// The optimal cluster distance threshold (mostly debug info)
     pub optimal_cdt: f64,
 }
 
 impl ClusterResult {
+    /// Translate the triplet labels in to point labels, taking the label which
+    /// occurs the most for each point as the true label. If labels occur equally,
+    /// the one which is stored first is used.
     pub fn new(
         cloud_size: usize,
         triplet_labels: Array1<i32>,
@@ -44,6 +66,7 @@ impl ClusterResult {
         }
     }
 
+    /// Helper to assign labels to points
     fn assign_label(map: &mut Vec<FxHashMap<i32, i32>>, point: usize, label: i32) {
         match map[point].get_mut(&label) {
             Some(count) => *count += 1,
@@ -53,6 +76,8 @@ impl ClusterResult {
         }
     }
 
+    /// Collapse the set of point labels by the label which
+    /// occurs the most
     fn collapse_by_max(map: Vec<FxHashMap<i32, i32>>) -> Array1<i32> {
         let mut point_labels = Array1::<i32>::zeros(map.len());
         for (idx, labels) in map.iter().enumerate() {
@@ -67,6 +92,8 @@ impl ClusterResult {
         point_labels
     }
 
+    /// Normalize the labels, which until this point have been the tiers in the
+    /// dendrogram. Noise is -1, all other labels start from 0.
     fn normalize(raw_labels: Array1<i32>) -> Array1<i32> {
         let mut output = Array1::<i32>::ones(raw_labels.len()) * -1;
         let uniques = raw_labels.iter().cloned().collect::<FxHashSet<i32>>();
@@ -92,6 +119,8 @@ impl ClusterResult {
     }
 }
 
+/// Compute the flat distance matrix using the triplet distance
+/// metric.
 fn distance_matrix(triplets: &[Triplet], scale: &f64) -> Vec<f64> {
     let mut matrix = Vec::with_capacity(triplets.len() * (triplets.len() - 1) / 2);
     matrix.fill(0.0);
@@ -104,6 +133,7 @@ fn distance_matrix(triplets: &[Triplet], scale: &f64) -> Vec<f64> {
     matrix
 }
 
+/// Compute the standard deviation of the distances in the dendrogram
 fn step_std_dev(steps: &[Step<f64>]) -> f64 {
     let n = steps.len() as f64;
     let mean = steps
@@ -117,6 +147,14 @@ fn step_std_dev(steps: &[Step<f64>]) -> f64 {
         .sqrt();
 }
 
+/// Apply the cluster distance threshold to the dendrogram and
+/// translate the results to labels for triplets
+///
+/// If the cluster_distance_threshold is None, the distance threshold is estimated
+/// by finding the step whith a distance larger than 2 times the standard deviations
+/// of all *prior* steps.
+///
+/// See paper for details.
 fn compute_triplet_labels(
     n_triplets: usize,
     dendrogram: &Dendrogram<f64>,
@@ -181,6 +219,8 @@ fn compute_triplet_labels(
     (triplet_labels, opt_cdt)
 }
 
+/// Reject clusters which do not meet a minimum size. Returns the number
+/// of removed clusters.
 fn apply_min_cluster_size(
     triplet_labels: &mut Array1<i32>,
     dendrogram: &Dendrogram<f64>,
@@ -203,6 +243,7 @@ fn apply_min_cluster_size(
     return removed;
 }
 
+/// Apply triplet clustering to a smoothed point cloud
 pub fn cluster(
     smooth_cloud_size: usize,
     triplets: &Vec<Triplet>,
