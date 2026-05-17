@@ -1,0 +1,161 @@
+use numpy::ndarray::{Array1, Array2};
+use std::env::var;
+use std::fs::read_to_string;
+use std::path::{Path, PathBuf};
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum LoadError {
+    FailedIO(std::io::Error),
+    BadFloatParse(std::num::ParseFloatError),
+    BadIntParse(std::num::ParseIntError),
+    NoManifest(std::env::VarError),
+}
+
+impl From<std::io::Error> for LoadError {
+    fn from(value: std::io::Error) -> Self {
+        Self::FailedIO(value)
+    }
+}
+
+impl From<std::num::ParseFloatError> for LoadError {
+    fn from(value: std::num::ParseFloatError) -> Self {
+        Self::BadFloatParse(value)
+    }
+}
+impl From<std::num::ParseIntError> for LoadError {
+    fn from(value: std::num::ParseIntError) -> Self {
+        Self::BadIntParse(value)
+    }
+}
+
+impl From<std::env::VarError> for LoadError {
+    fn from(value: std::env::VarError) -> Self {
+        Self::NoManifest(value)
+    }
+}
+
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FailedIO(err) => {
+                write!(f, "Failed to load cloud from data file with error: {}", err)
+            }
+            Self::BadFloatParse(err) => {
+                write!(f, "Failed to parse data in cloud file with error: {}", err)
+            }
+            Self::BadIntParse(err) => {
+                write!(f, "Failed to parse data in cloud file with error: {}", err)
+            }
+            Self::NoManifest(err) => {
+                write!(f, "Could not find cargo manifest directory: {}", err)
+            }
+        }
+    }
+}
+
+impl std::error::Error for LoadError {}
+
+#[allow(dead_code)]
+pub fn get_test_data_path() -> Result<PathBuf, LoadError> {
+    let manifest: PathBuf = var("CARGO_MANIFEST_DIR")?.into();
+    let crates_path = manifest.parent().expect("Cargo manifest has no parent?");
+    let workspace_root = crates_path.parent().expect("Cargo manifest has no parent?");
+    Ok(workspace_root.join("data"))
+}
+
+#[allow(dead_code)]
+pub fn load_cloud_from_dat(path: &Path) -> Result<Array2<f64>, LoadError> {
+    let data = read_to_string(path)?;
+    let mut cloud = Array2::<f64>::zeros((data.lines().fold(0, |x, _| x + 1) - 3, 3));
+    for (ridx, row) in data.lines().enumerate() {
+        if ridx < 3 {
+            continue;
+        }
+        let entries = row.split(" ");
+        for (cidx, entry) in entries.enumerate() {
+            cloud[(ridx - 3, cidx)] = entry.parse()?;
+        }
+    }
+
+    Ok(cloud)
+}
+
+#[allow(dead_code)]
+pub fn load_test_data() -> Result<Array2<f64>, LoadError> {
+    let path = get_test_data_path()?.join("test.dat");
+    load_cloud_from_dat(&path)
+}
+
+#[allow(dead_code)]
+pub fn load_cdist_data() -> Result<Array1<f64>, LoadError> {
+    let path = get_test_data_path()?.join("debug_cdist.csv");
+    let data = read_to_string(path)?;
+    let mut array = Array1::<f64>::zeros(data.lines().fold(0, |x, _| x + 1));
+    for (idx, line) in data.lines().enumerate() {
+        array[idx] = line.split(",").collect::<Vec<&str>>()[0].parse()?;
+    }
+    Ok(array)
+}
+
+#[allow(dead_code)]
+pub fn load_test_results()
+-> Result<(f64, f64, f64, f64, usize, Array2<f64>, Array1<i32>), LoadError> {
+    let path = get_test_data_path()?.join("result.csv");
+    let spath = get_test_data_path()?.join("debug_smoothed.csv");
+    let smooth_data = read_to_string(spath)?;
+    let spoints = smooth_data.lines().fold(0, |x, _| x + 1) - 1;
+    let mut smooth_array = Array2::<f64>::zeros((spoints, 3));
+    for (ridx, row) in smooth_data.lines().enumerate() {
+        if ridx < 1 {
+            continue;
+        }
+        for (cidx, entry) in row.split(",").enumerate() {
+            smooth_array[(ridx - 1, cidx)] = entry.parse()?;
+        }
+    }
+    let data = read_to_string(path)?;
+    let npoints = data.lines().fold(0, |x, _| x + 1) - 7;
+    let mut results_labels = Array1::<i32>::zeros(npoints);
+    let mut dnn = 0.0;
+    let mut smooth_radius = 0.0;
+    let mut dist_scale = 0.0;
+    let mut cluster_threshold = 0.0;
+    let mut n_removed = 0;
+    for (ridx, row) in data.lines().enumerate() {
+        if ridx < 7 {
+            let entries = row.split(" ").collect::<Vec<&str>>();
+            match ridx {
+                0 => dnn = entries[3].parse()?,
+                1 => smooth_radius = entries[4].parse()?,
+                2 => dist_scale = entries[4].parse()?,
+                3 => cluster_threshold = entries[4].parse()?,
+                4 => n_removed = entries[5].parse()?,
+                _ => (),
+            };
+            continue;
+        }
+        let entries = row.split(",");
+        for (cidx, entry) in entries.enumerate() {
+            if cidx < 3 {
+                continue;
+            } else {
+                if entry.contains(";") {
+                    results_labels[ridx - 7] =
+                        entry.split(";").collect::<Vec<&str>>()[0].parse()?;
+                } else {
+                    results_labels[ridx - 7] = entry.parse()?;
+                }
+            }
+        }
+    }
+    Ok((
+        dnn,
+        smooth_radius,
+        dist_scale,
+        cluster_threshold,
+        n_removed,
+        smooth_array,
+        results_labels,
+    ))
+}

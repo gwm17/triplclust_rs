@@ -1,0 +1,21 @@
+[package]
+name = "triplclust_rs"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+itertools = "0.14.0"
+kiddo = "5.3.0"
+kodama = "0.3.0"
+numpy.workspace = true
+rustc-hash = "2.1.2"
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "benchmark"
+harness = false
