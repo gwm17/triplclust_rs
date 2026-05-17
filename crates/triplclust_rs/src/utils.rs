@@ -2,6 +2,7 @@
 //! triplclust algorithm for testing and validating the behavior of this code.
 //! I'm not docstringing all of this.
 use numpy::ndarray::{Array1, Array2};
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::env::var;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
@@ -102,8 +103,19 @@ pub fn load_cdist_data() -> Result<Array1<f64>, LoadError> {
 }
 
 #[allow(dead_code)]
-pub fn load_test_results()
--> Result<(f64, f64, f64, f64, usize, Array2<f64>, Array1<i32>), LoadError> {
+pub fn load_test_results() -> Result<
+    (
+        f64,
+        f64,
+        f64,
+        f64,
+        usize,
+        Array2<f64>,
+        Vec<Vec<i32>>,
+        FxHashSet<i32>,
+    ),
+    LoadError,
+> {
     let path = get_test_data_path()?.join("result.csv");
     let spath = get_test_data_path()?.join("debug_smoothed.csv");
     let smooth_data = read_to_string(spath)?;
@@ -118,13 +130,21 @@ pub fn load_test_results()
         }
     }
     let data = read_to_string(path)?;
-    let npoints = data.lines().fold(0, |x, _| x + 1) - 7;
-    let mut results_labels = Array1::<i32>::zeros(npoints);
+    let mut results_labels = vec![];
+    let mut unique_labels = FxHashSet::<i32>::default();
     let mut dnn = 0.0;
     let mut smooth_radius = 0.0;
     let mut dist_scale = 0.0;
     let mut cluster_threshold = 0.0;
     let mut n_removed = 0;
+    let mut label_map = FxHashMap::<i32, i32>::default();
+    // Mapping of triplclust_rs labels to triplclust labels
+    // determined by visual inspection... not the best
+    label_map.insert(0, 3);
+    label_map.insert(1, 0);
+    label_map.insert(2, 1);
+    label_map.insert(3, 2);
+    label_map.insert(-1, -1);
     for (ridx, row) in data.lines().enumerate() {
         if ridx < 7 {
             let entries = row.split(" ").collect::<Vec<&str>>();
@@ -139,15 +159,28 @@ pub fn load_test_results()
             continue;
         }
         let entries = row.split(",");
+        results_labels.push(vec![]);
         for (cidx, entry) in entries.enumerate() {
             if cidx < 3 {
                 continue;
             } else {
                 if entry.contains(";") {
-                    results_labels[ridx - 7] =
-                        entry.split(";").collect::<Vec<&str>>()[0].parse()?;
+                    let labels = entry.split(";").collect::<Vec<&str>>();
+                    for label in labels {
+                        let tr_label = match label_map.get(&label.parse()?) {
+                            Some(l) => l,
+                            None => panic!(),
+                        };
+                        results_labels[ridx - 7].push(*tr_label);
+                        unique_labels.insert(*tr_label);
+                    }
                 } else {
-                    results_labels[ridx - 7] = entry.parse()?;
+                    let tr_label = match label_map.get(&entry.parse()?) {
+                        Some(l) => l,
+                        None => panic!(),
+                    };
+                    results_labels[ridx - 7].push(*tr_label);
+                    unique_labels.insert(*tr_label);
                 }
             }
         }
@@ -160,5 +193,6 @@ pub fn load_test_results()
         n_removed,
         smooth_array,
         results_labels,
+        unique_labels,
     ))
 }

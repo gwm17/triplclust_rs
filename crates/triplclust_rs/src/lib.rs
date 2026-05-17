@@ -11,7 +11,6 @@ mod tests {
 
     use super::*;
     static PRECISION: f64 = 1.0e-4;
-    use rustc_hash::FxHashSet;
 
     #[test]
     fn full_clustering() {
@@ -22,14 +21,22 @@ mod tests {
                 panic!();
             }
         };
-        let (test_dnn, test_radius, test_scale, test_thresh, _, test_smooth, test_labels) =
-            match utils::load_test_results() {
-                Ok(res) => res,
-                Err(err) => {
-                    println!("Failed to load test results with error {err}");
-                    panic!();
-                }
-            };
+        let (
+            test_dnn,
+            test_radius,
+            test_scale,
+            test_thresh,
+            _,
+            test_smooth,
+            test_labels,
+            unique_test_labels,
+        ) = match utils::load_test_results() {
+            Ok(res) => res,
+            Err(err) => {
+                println!("Failed to load test results with error {err}");
+                panic!();
+            }
+        };
 
         let int_scale = dnn::dnn_first_quartile(&test_point_cloud.view());
         assert!((test_dnn - int_scale).abs() < PRECISION);
@@ -61,10 +68,13 @@ mod tests {
         assert!(clusters.unique_labels.len() > 1);
         assert!((clusters.optimal_cdt - test_thresh).abs() < PRECISION);
         assert_eq!(clusters.labels.len(), test_labels.len());
-        let unique_test_labels = test_labels.into_iter().collect::<FxHashSet<i32>>();
         assert!(unique_test_labels.len() == clusters.unique_labels.len());
         for label in clusters.unique_labels.iter() {
             assert!(unique_test_labels.contains(label));
+        }
+        for (idx, label) in clusters.labels.iter().enumerate() {
+            println!("{}:{} -- {:?}", idx, label, test_labels[idx]);
+            assert!(test_labels[idx].contains(label));
         }
     }
 }
