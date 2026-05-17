@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from triplclust_py import smooth_pointcloud, calculate_dnn, triplet_clustering
+from timeit import timeit
 
 
 def load_test_data() -> np.ndarray:
@@ -15,13 +16,26 @@ def load_test_data() -> np.ndarray:
     return cloud
 
 
-def main():
-    data = load_test_data()
-    dnn = calculate_dnn(data)
-    smooth_cloud = smooth_pointcloud(data, dnn, None)
+DATA = load_test_data()
+
+
+def loop():
+    dnn = calculate_dnn(DATA)
+    smooth_cloud = smooth_pointcloud(DATA, dnn, None)
     cluster_labels, unique_labels = triplet_clustering(
         smooth_cloud, 19, 2, 0.03, dnn, None, None, 5, "single"
     )
+
+
+def main():
+    dnn = calculate_dnn(DATA)
+    smooth_cloud = smooth_pointcloud(DATA, dnn, None)
+    cluster_labels, unique_labels = triplet_clustering(
+        smooth_cloud, 19, 2, 0.03, dnn, None, None, 5, "single"
+    )
+    n = 1000
+    time = timeit(loop, number=n)
+    print(f"Avg. time for {n} passes: {time / n:.3e} s")
 
     fig, ax = plt.subplots(
         1, 1, subplot_kw={"projection": "3d"}, constrained_layout=True
@@ -31,7 +45,7 @@ def main():
     for label in unique_labels:
         mask = cluster_labels == label
         ax.scatter(
-            data[mask, 0], data[mask, 1], data[mask, 2], label=f"Cluster {label}"
+            DATA[mask, 0], DATA[mask, 1], DATA[mask, 2], label=f"Cluster {label}"
         )
     ax.legend()
     plt.show(block=True)

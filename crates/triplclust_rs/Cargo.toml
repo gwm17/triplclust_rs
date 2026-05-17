@@ -1,6 +1,6 @@
 [package]
 name = "triplclust_rs"
-readme = "README.md"
+readme.workspace = true
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
