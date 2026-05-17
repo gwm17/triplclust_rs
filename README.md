@@ -1,7 +1,13 @@
 # triplclust_rs
 
-Rust implementation of the [`triplclust`](https://github.com/cdalitz/triplclust) hierarchical clustering algorithm used by 
-AT-TPC, with Python bindings using pyo3.
+Rust implementation of the [`triplclust`](https://github.com/cdalitz/triplclust) 
+hierarchical clustering algorithm outlined in
+
+> C. Dalitz, J. Wilberg, L. Aymans: "TriplClust: An Algorithm for Curve Detection in
+> 3D Point Clouds." Image Processing Online 9, pp. 26-46 (2019).
+> https://doi.org/10.5201/ipol.2019.234
+
+used by AT-TPC, with Python bindings using pyo3.
 
 ## Installation
 
