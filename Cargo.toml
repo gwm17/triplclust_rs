@@ -5,11 +5,12 @@ resolver = "3"
 [workspace.package]
 authors = ["Gordon McCann"]
 edition = "2024"
-license = "MIT"
+license = "GPL3"
 license-file = "LICENSE.txt"
 version = "0.1.0"
 repository = "https://github.com/gwm17/triplclust_rs"
 readme = "README.md"
+description = "Rust version of C. Dalitz's triplclust clustering algorithm"
 
 [workspace.dependencies]
 triplclust_rs = { path = "crates/triplclust_rs" }
