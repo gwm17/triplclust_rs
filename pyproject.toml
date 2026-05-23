@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "triplclust_py"
+version = "0.2.0"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -19,3 +20,7 @@ license = "LICENSE"
 features = ["pyo3/extension-module"]
 profile = "release"
 manifest-path = "./crates/triplclust_py/Cargo.toml"
+
+[tool.maturin.generate-ci.github]
+trusted-publishing = true
+publishing-environment = "pypi"
