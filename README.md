@@ -33,7 +33,7 @@ pip install triplclust_py
 Most OS-architecture-python targets have a prebuilt wheel, so you should not need to
 compile from source. Some caveats:
 
-- windows11-aarch is not supported. [kiddo](https://crates.io/kiddo) does not support
+- windows11-aarch is not supported. [kiddo](https://crates.io/crates/kiddo) does not support
 windows11-aarch through one of it's dependencies.
 - Python prior to 3.8 is not supported on any platform. Python prior to 3.10 is not
 supported on Windows.
