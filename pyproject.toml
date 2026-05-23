@@ -4,7 +4,6 @@ build-backend = "maturin"
 
 [project]
 name = "triplclust_py"
-version = "0.2.0"
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Rust",
@@ -23,4 +22,6 @@ manifest-path = "./crates/triplclust_py/Cargo.toml"
 
 [tool.maturin.generate-ci.github]
 trusted-publishing = true
+# Optional: name of the GitHub Actions environment to use for the release job
 publishing-environment = "pypi"
+
