@@ -5,6 +5,7 @@
 [![PyPI - version](https://img.shields.io/pypi/v/triplclust_py)](https://pypi.org/project/triplclust_py)
 [![Crates.io - version](https://img.shields.io/crates/v/triplclust_rs)](https://crates.io/crates/triplclust_rs)
 [![Rust Docs](https://img.shields.io/docsrs/triplclust_rs)](https://docs.rs/crates/triplclust_rs)
+![License](https://img.shields.io/github/license/gwm17/triplclust_rs)
 
 Rust implementation of the [`triplclust`](https://github.com/cdalitz/triplclust) 
 hierarchical clustering algorithm outlined in
