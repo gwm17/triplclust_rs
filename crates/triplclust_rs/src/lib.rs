@@ -1,3 +1,62 @@
+//! # triplclust_rs
+//!
+//! triplclust_rs is a Rust version of the [triplclust](https://github.com/cdalitz/triplclust)
+//! algorithm developed by C. Dalitz and described in the following paper
+//!
+//! > C. Dalitz, J. Wilberg, L. Aymans: "TriplClust: An Algorithm for Curve Detection in
+//! > 3D Point Clouds." Image Processing Online 9, pp. 26-46 (2019).
+//! > https://doi.org/10.5201/ipol.2019.234
+//!
+//! This version of the algorithm is tailored to interact well with data produced during
+//! the [Spyral](https://github.com/attpc/Spyral) analysis framework, with first class
+//! support for numpy array point clouds.
+//!
+//! ## Install
+//!
+//! To add it to your rust project use
+//!
+//! ```bash
+//! cargo add triplclust_rs
+//! ```
+//!
+//! ## How it works
+//!
+//! There are two primary stages to the analysis, smoothing and clustering. Smoothing
+//! is a data preparation stage where the point cloud is de-noised using a nearest-neighbors
+//! approach. The second stage is the clustering, where each point in the cloud is composed
+//! into it valid set of triplets (3 points aligned in a direction) and those triplets
+//! are clustered by a distance metric outlined in the paper. In general, this library
+//! follows the original implementation with one exception:
+//!
+//! The original implementation allowed for overlapping labels between clusters. This
+//! can occur due to the fact that points are not uniquely assigned to triplets. `triplclust_rs`
+//! tries to handle this better by using metrics to disentangle overlapping labels. Currently,
+//! only one method is available, and that is to collapse by the most frequently assigned label
+//! for a point. For example, if a point recieved the labels [1, 1, 1, 2, 2] from it's parent
+//! triplets, it would resut in the label 1 as 1 was assigned most frequently.
+//!
+//! ## Python bindings
+//!
+//! Python bindings are provided via the triplclust_py crate, and the Python package is
+//! hosted on PyPI as [triplclust_py](https://pypi.org/project/triplclust_py).
+//!
+//! ## Peformance
+//!
+//! triplclust_rs was written with performance in mind. Benchmarks are included and can
+//! be run using
+//!
+//! ```bash
+//! cargo bench
+//! ```
+//!
+//! Early testing has shown that triplclust_rs is ~2x faster than the original implementation.
+//! This has *only* been performed on test data, and a small point cloud at that, so should
+//! be taken with a big grain of salt. Additionally, the original implementation is tricky
+//! to benchmark 1-to-1 as it was written more as a test application. More testing is needed
+//! to validate these early results.
+//!
+//! Benchmarks are run using the [criterion](https://docs.rs/criterion) crate.
+
 pub mod cluster;
 pub mod dnn;
 pub mod error;
