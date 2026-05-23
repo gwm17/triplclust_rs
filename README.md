@@ -2,7 +2,7 @@
 
 ![Rust CI](https://github.com/gwm17/triplclust_rs/actions/workflows/rust_build.yaml/badge.svg)
 ![Python CI](https://github.com/gwm17/triplclust_rs/actions/workflows/python_build.yaml/badge.svg)
-[![PyPI - version](https://img.shields.io/pypi/v/triplclust_py)](https://pypi.org/projects/triplclust_py)
+[![PyPI - version](https://img.shields.io/pypi/v/triplclust_py)](https://pypi.org/project/triplclust_py)
 [![Crates.io - version](https://img.shields.io/crates/v/triplclust_rs)](https://crates.io/crates/triplclust_rs)
 [![Rust Docs](https://img.shields.io/docsrs/triplclust_rs)](https://docs.rs/crates/triplclust_rs)
 
