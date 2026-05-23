@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.12,<2.0"]
+requires = ["maturin>=1.13,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -19,3 +19,9 @@ license = "LICENSE"
 features = ["pyo3/extension-module"]
 profile = "release"
 manifest-path = "./crates/triplclust_py/Cargo.toml"
+
+[tool.maturin.generate-ci.github]
+trusted-publishing = true
+# Optional: name of the GitHub Actions environment to use for the release job
+publishing-environment = "pypi"
+
