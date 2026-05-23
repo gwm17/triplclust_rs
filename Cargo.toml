@@ -5,8 +5,8 @@ resolver = "3"
 [workspace.package]
 authors = ["Gordon McCann"]
 edition = "2024"
-license = "GPL3"
-license-file = "LICENSE.txt"
+license = "GPL-3.0-or-later"
+license-file = "LICENSE"
 version = "0.1.0"
 repository = "https://github.com/gwm17/triplclust_rs"
 readme = "README.md"
