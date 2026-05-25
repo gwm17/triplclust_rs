@@ -73,7 +73,7 @@ This will compile `triplclust_rs` and install the Python bindings `triplclust_py
 ## Usage
 
 For a complete description of the library, see the Rust [documentation](https://docs.rs/crates/triplclust_rs).
-For a high level overview and an outline of the Python bindings, see the Python documentation.
+For a high level overview and an outline of the Python bindings, see the Python [documentation](https://gwm17.github.io/triplclust_rs).
 
 ## Benchmarks
 
