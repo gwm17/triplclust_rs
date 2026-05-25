@@ -4,7 +4,7 @@
 ![Python CI](https://github.com/gwm17/triplclust_rs/actions/workflows/python_build.yaml/badge.svg)
 [![PyPI - version](https://img.shields.io/pypi/v/triplclust_py)](https://pypi.org/project/triplclust_py)
 [![Crates.io - version](https://img.shields.io/crates/v/triplclust_rs)](https://crates.io/crates/triplclust_rs)
-[![Rust Docs](https://img.shields.io/docsrs/triplclust_rs)](https://docs.rs/crates/triplclust_rs)
+[![Rust Docs](https://img.shields.io/docsrs/triplclust_rs)](https://docs.rs/triplclust_rs)
 ![License](https://img.shields.io/github/license/gwm17/triplclust_rs)
 
 Rust implementation of the [`triplclust`](https://github.com/cdalitz/triplclust) 
@@ -72,7 +72,7 @@ This will compile `triplclust_rs` and install the Python bindings `triplclust_py
 
 ## Usage
 
-For a complete description of the library, see the Rust [documentation](https://docs.rs/crates/triplclust_rs).
+For a complete description of the library, see the Rust [documentation](https://docs.rs/triplclust_rs).
 For a high level overview and an outline of the Python bindings, see the Python [documentation](https://gwm17.github.io/triplclust_rs).
 
 ## Benchmarks
