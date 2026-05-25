@@ -19,10 +19,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.8"
-      - name: Build triplclust_py
-        uses: Py03/maturin-action@v1
-        run: maturin develop
+          python-version: "3.11"
+      - uses: Py03/maturin-action@v1
+      - run: maturin develop
       - run: pip install zensical mkdocstrings-python
       - run: zensical build --clean
       - uses: actions/upload-pages-artifact@v5
