@@ -58,10 +58,12 @@
 //! Benchmarks are run using the [criterion](https://docs.rs/criterion) crate.
 
 pub mod cluster;
+pub mod digraph;
 pub mod dnn;
 pub mod error;
 pub mod params;
 pub mod smooth;
+pub mod stitch;
 pub mod triplet;
 pub mod utils;
 
