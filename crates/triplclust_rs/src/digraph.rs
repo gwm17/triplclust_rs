@@ -13,6 +13,7 @@ struct Edge {
 
 struct Node {
     index: usize,
+    row: usize,
     in_edges: FxHashSet<usize>,
     out_edges: FxHashSet<usize>,
 }
@@ -24,28 +25,29 @@ pub struct DiGraph {
 }
 
 impl DiGraph {
-    pub fn new(point_cloud: &ArrayView2<f64>, labels: &ArrayView1<i32>, cluster: i32) -> Self {
+    pub fn new(point_cloud: &ArrayView2<f64>, graph_points: &[usize]) -> Self {
         let mut digraph = Self {
             edges: vec![],
             nodes: vec![],
             roots: vec![],
         };
-        for (idx, label) in labels.iter().enumerate() {
-            if *label == cluster {
-                digraph.nodes.push(Node {
-                    index: idx,
-                    in_edges: FxHashSet::default(),
-                    out_edges: FxHashSet::default(),
-                });
-            }
+        for (point_idx, row) in graph_points.iter().enumerate() {
+            digraph.nodes.push(Node {
+                index: point_idx,
+                row: *row,
+                in_edges: FxHashSet::default(),
+                out_edges: FxHashSet::default(),
+            });
         }
         digraph.roots.push(digraph.nodes.len() - 1);
         digraph.miniumum_spanning_arboresence(point_cloud);
         digraph
     }
 
-    pub fn split_into_subtrees(&mut self, min_depth: usize) -> Vec<Vec<usize>> {
-        self.split_by_depth(min_depth);
+    pub fn split_into_subtrees(&mut self, min_depth: usize) -> Option<Vec<Vec<usize>>> {
+        if !self.split_by_depth(min_depth) {
+            return None;
+        }
         self.split_by_weight();
 
         let mut subtrees = vec![];
@@ -80,7 +82,7 @@ impl DiGraph {
             }
         }
 
-        return subtrees;
+        return Some(subtrees);
     }
 
     fn miniumum_spanning_arboresence(&mut self, point_cloud: &ArrayView2<f64>) {
@@ -89,9 +91,9 @@ impl DiGraph {
             .iter()
             .map(|node| {
                 [
-                    point_cloud[(node.index, 0)],
-                    point_cloud[(node.index, 1)],
-                    point_cloud[(node.index, 2)],
+                    point_cloud[(node.row, 0)],
+                    point_cloud[(node.row, 1)],
+                    point_cloud[(node.row, 2)],
                 ]
             })
             .collect();
@@ -113,7 +115,8 @@ impl DiGraph {
         }
     }
 
-    fn split_by_depth(&mut self, min_depth: usize) {
+    fn split_by_depth(&mut self, min_depth: usize) -> bool {
+        let mut changed = false;
         for node_idx in 0..self.nodes.len() {
             if self.nodes[node_idx].in_edges.len() <= 1 {
                 continue;
@@ -126,6 +129,7 @@ impl DiGraph {
             }
 
             if edges_to_remove.len() > 1 {
+                changed = true;
                 let mut min_dist_edge = 0;
                 let mut min_dist = f64::INFINITY;
                 for edge in edges_to_remove.iter() {
@@ -143,6 +147,8 @@ impl DiGraph {
                 }
             }
         }
+
+        changed
     }
 
     fn split_by_weight(&mut self) {

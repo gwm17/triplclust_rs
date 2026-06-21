@@ -136,3 +136,26 @@ impl From<ClusterError> for TriplclustError {
         Self::Cluster(value)
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum StitchError {
+    NoInitialClusters,
+    SVDFailed(faer::linalg::svd::SvdError),
+}
+
+impl std::fmt::Display for StitchError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoInitialClusters => write!(f, "No clusters to stitch!"),
+            Self::SVDFailed(e) => write!(f, "SVD failed with error: {:?}", e),
+        }
+    }
+}
+
+impl From<faer::linalg::svd::SvdError> for StitchError {
+    fn from(value: faer::linalg::svd::SvdError) -> Self {
+        Self::SVDFailed(value)
+    }
+}
+
+impl std::error::Error for StitchError {}
