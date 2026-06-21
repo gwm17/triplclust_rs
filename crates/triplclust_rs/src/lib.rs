@@ -63,7 +63,7 @@ pub mod dnn;
 pub mod error;
 pub mod params;
 pub mod smooth;
-pub mod stitch;
+pub mod split;
 pub mod triplet;
 pub mod utils;
 

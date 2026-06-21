@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::num::NonZero;
 
 use kiddo::{ImmutableKdTree, SquaredEuclidean};
-use numpy::ndarray::{ArrayView1, ArrayView2};
+use numpy::ndarray::ArrayView2;
 
 struct Edge {
     begin: usize,

@@ -1,12 +1,13 @@
 mod error;
 
 use error::PyTriplclustError;
-use numpy::{PyArray1, PyArray2, PyReadonlyArray2, ToPyArray};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::prelude::*;
 use triplclust_rs::cluster::cluster;
 use triplclust_rs::dnn::dnn_first_quartile;
 use triplclust_rs::params::{ClusterParams, SmoothParams, TripletParams};
 use triplclust_rs::smooth::smooth_pointcloud as rs_smooth_pointcloud;
+use triplclust_rs::split;
 use triplclust_rs::triplet::evaluate_triplets;
 
 #[pyfunction]
@@ -80,10 +81,28 @@ pub fn triplet_clustering<'py>(
     ))
 }
 
+#[pyfunction]
+pub fn split_clusters<'py>(
+    py: Python<'py>,
+    point_cloud: PyReadonlyArray2<f64>,
+    labels: PyReadonlyArray1<i32>,
+    unqiue_labels: PyReadonlyArray1<i32>,
+    min_depth: i32,
+) -> Result<(Bound<'py, PyArray1<i32>>, Bound<'py, PyArray1<i32>>), PyTriplclustError> {
+    let (labels, unis) = split::split_clusters(
+        &point_cloud.as_array(),
+        &labels.as_array(),
+        &unqiue_labels.as_array(),
+        min_depth as usize,
+    )?;
+    Ok((labels.to_pyarray(py), unis.to_pyarray(py)))
+}
+
 #[pymodule]
 fn triplclust_py(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(calculate_dnn, m)?)?;
     m.add_function(wrap_pyfunction!(smooth_pointcloud, m)?)?;
     m.add_function(wrap_pyfunction!(triplet_clustering, m)?)?;
+    m.add_function(wrap_pyfunction!(split_clusters, m)?)?;
     Ok(())
 }

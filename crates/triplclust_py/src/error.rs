@@ -1,9 +1,10 @@
 use pyo3::PyErr;
-use triplclust_rs::error::TriplclustError;
+use triplclust_rs::error::{SplitError, TriplclustError};
 
 #[derive(Debug, Clone)]
 pub enum PyTriplclustError {
     Triplclust(TriplclustError),
+    Split(SplitError),
 }
 
 impl From<TriplclustError> for PyTriplclustError {
@@ -12,10 +13,17 @@ impl From<TriplclustError> for PyTriplclustError {
     }
 }
 
+impl From<SplitError> for PyTriplclustError {
+    fn from(value: SplitError) -> Self {
+        Self::Split(value)
+    }
+}
+
 impl std::fmt::Display for PyTriplclustError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Triplclust(val) => write!(f, "{}", val),
+            Self::Split(val) => write!(f, "{}", val),
         }
     }
 }

@@ -1,19 +1,19 @@
 use super::digraph::DiGraph;
-use super::error::StitchError;
+use super::error::SplitError;
 
 use faer;
 use numpy::ndarray::{Array1, ArrayView1, ArrayView2};
 use rustc_hash::FxHashSet;
 
-pub fn stitch_pointcloud(
+pub fn split_clusters(
     point_cloud: &ArrayView2<f64>,
     labels: &ArrayView1<i32>,
     unique_labels: &ArrayView1<i32>,
     min_depth: usize,
-) -> Result<(Array1<i32>, Array1<i32>), StitchError> {
+) -> Result<(Array1<i32>, Array1<i32>), SplitError> {
     let mut max_id = match labels.iter().max() {
         Some(id) => *id,
-        None => return Err(StitchError::NoInitialClusters),
+        None => return Err(SplitError::NoInitialClusters),
     };
     let mut new_labels = labels.to_owned();
     for cluster in unique_labels.iter() {
@@ -25,7 +25,7 @@ pub fn stitch_pointcloud(
         }
 
         let updated_labels =
-            match stitch_cluster(point_cloud, &cluster_points, *cluster, max_id, min_depth) {
+            match split_cluster(point_cloud, &cluster_points, *cluster, max_id, min_depth) {
                 Some(up) => up,
                 None => continue,
             };
@@ -49,7 +49,7 @@ pub fn stitch_pointcloud(
     Ok((new_labels, new_unique))
 }
 
-fn stitch_cluster(
+fn split_cluster(
     point_cloud: &ArrayView2<f64>,
     cluster_points: &[usize],
     current_id: i32,
@@ -220,7 +220,7 @@ fn expand_start(
     Some(sub_clusters)
 }
 
-fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), StitchError> {
+fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), SplitError> {
     // Calculate column-wise mean
     let mean_point: faer::Col<f64> = data
         .col_iter()
