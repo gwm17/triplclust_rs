@@ -105,7 +105,7 @@ fn correct_over_segmentation(
             let start_idx = cluster.len() * 3 / 4;
             let sub_len = cluster.len() - start_idx;
             let cloud = faer::Mat::from_fn(sub_len, 3, |i, j| {
-                point_cloud[(cluster_points[i + start_idx], j)]
+                point_cloud[(cluster_points[cluster[i + start_idx]], j)]
             });
 
             let (a, b) = match pca_ols(cloud.as_ref()) {
@@ -117,7 +117,8 @@ fn correct_over_segmentation(
             };
 
             // Original was different here... did mean of same value multiplied by 20?
-            let max_distance = ols_distance(a.as_ref(), b.as_ref(), cloud.row(0));
+            // No idea where the 20.0 comes from
+            let max_distance = 20.0 * ols_distance(a.as_ref(), b.as_ref(), cloud.row(0));
             for (comp_idx, comp_cluster) in sub_clusters.iter().enumerate() {
                 if comp_idx == orig_idx
                     || (cluster.last().expect("cluster has no points?") + tolerance)
@@ -125,7 +126,8 @@ fn correct_over_segmentation(
                 {
                     continue;
                 }
-                let leading_point = faer::Row::from_fn(3, |i| point_cloud[(comp_cluster[0], i)]);
+                let leading_point =
+                    faer::Row::from_fn(3, |i| point_cloud[(cluster_points[comp_cluster[0]], i)]);
                 let dist = ols_distance(a.as_ref(), b.as_ref(), leading_point.as_ref());
                 if dist < max_distance && dist < min_cluster_dist {
                     cluster_to_join = Some((orig_idx, comp_idx));
@@ -148,7 +150,7 @@ fn correct_over_segmentation(
                 // So we maintain that if it is absorbed in another cluster,
                 // that cluster becomes the first in the set...
                 // What first really means here is unclear though. It may make more
-                // sense to sort on indicies...
+                // sense to sort on leading indicies...
                 if *join == 0 {
                     sub_clusters.rotate_left(*join);
                 }
@@ -165,12 +167,57 @@ fn correct_over_segmentation(
 fn expand_start(
     point_cloud: &ArrayView2<f64>,
     cluster_points: &[usize],
-    sub_clusters: Vec<Vec<usize>>,
+    mut sub_clusters: Vec<Vec<usize>>,
 ) -> Option<Vec<Vec<usize>>> {
     if sub_clusters.len() <= 1 {
         return None;
     }
-    todo!();
+    let mut leading_cluster = sub_clusters[0].clone();
+    // Loop over followers
+    for idx in 1..sub_clusters.len() {
+        let stop_idx = sub_clusters[idx].len() / 5;
+        let cloud = faer::Mat::from_fn(stop_idx + 1, 3, |i, j| {
+            point_cloud[(cluster_points[sub_clusters[idx][i]], j)]
+        });
+        let (a, b) = match pca_ols(cloud.as_ref()) {
+            Ok(vals) => vals,
+            Err(e) => {
+                println!(
+                    "PCA failed in expand start (idx: {}) with error: {}",
+                    idx, e
+                );
+                return None;
+            }
+        };
+
+        let distances = faer::Col::from_fn(cloud.nrows(), |i| {
+            ols_distance(a.as_ref(), b.as_ref(), cloud.row(i))
+        });
+        let mean_dist = distances.sum() / (distances.nrows() as f64);
+        let sigma_dist = (distances
+            .iter()
+            .fold(0.0, |acc, val| acc + (val - mean_dist) * (val - mean_dist))
+            / ((distances.nrows() - 1) as f64))
+            .sqrt();
+        let upper = mean_dist + 2.0 * sigma_dist;
+        let lower = mean_dist - 2.0 * sigma_dist;
+        let mut points_to_remove = FxHashSet::<usize>::default();
+        for (cidx, pidx) in leading_cluster.iter().enumerate() {
+            let point = faer::Row::from_fn(3, |i| point_cloud[(cluster_points[*pidx], i)]);
+            let dist = ols_distance(a.as_ref(), b.as_ref(), point.as_ref());
+            if dist < upper && dist > lower {
+                sub_clusters[idx].push(*pidx);
+                points_to_remove.insert(cidx);
+            }
+        }
+        leading_cluster = leading_cluster
+            .into_iter()
+            .filter(|x| points_to_remove.contains(x))
+            .collect();
+    }
+    sub_clusters[0] = leading_cluster;
+
+    Some(sub_clusters)
 }
 
 fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), StitchError> {
