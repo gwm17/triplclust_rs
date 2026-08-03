@@ -23,7 +23,12 @@ pub fn smooth_pointcloud<'py>(
     neighborhood_radius: Option<f64>,
 ) -> Result<Bound<'py, PyArray2<f64>>, PyTriplclustError> {
     let params = match dnn {
-        Some(val) => SmoothParams::default_with_dnn(val),
+        Some(val) => match neighborhood_radius {
+            Some(scale) => SmoothParams {
+                neighborhood_radius: val * scale,
+            },
+            None => SmoothParams::default_with_dnn(val),
+        },
         None => match neighborhood_radius {
             Some(nval) => SmoothParams {
                 neighborhood_radius: nval,
@@ -54,9 +59,9 @@ pub fn triplet_clustering<'py>(
         triplet_error_cutoff,
     )?;
 
-    let cluster_params = if dnn.is_some() && cluster_scale.is_none() {
+    let cluster_params = if dnn.is_none() {
         ClusterParams::from_fullargs(
-            dnn,
+            Some(dnn_first_quartile(&smoothed_point_cloud.as_array())),
             cluster_scale,
             cluster_distance_threshold,
             min_cluster_size,
@@ -64,7 +69,7 @@ pub fn triplet_clustering<'py>(
         )?
     } else {
         ClusterParams::from_fullargs(
-            Some(dnn_first_quartile(&smoothed_point_cloud.as_array())),
+            dnn,
             cluster_scale,
             cluster_distance_threshold,
             min_cluster_size,

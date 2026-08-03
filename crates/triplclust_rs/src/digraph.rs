@@ -5,12 +5,14 @@ use std::num::NonZero;
 use kiddo::{ImmutableKdTree, SquaredEuclidean};
 use numpy::ndarray::ArrayView2;
 
+#[derive(Debug)]
 struct Edge {
     begin: usize,
     end: usize,
     distance: f64,
 }
 
+#[derive(Debug)]
 struct Node {
     index: usize,
     row: usize,
@@ -97,17 +99,17 @@ impl DiGraph {
                 ]
             })
             .collect();
-        let tree = ImmutableKdTree::<f64, 3>::new_from_slice(&explicit_layout);
-        let n_neigh = NonZero::<usize>::new(1).expect("Some how 1 is 0??");
+        let n_neigh = NonZero::<usize>::new(2).expect("Some how 1 is 0??");
 
         for node_idx in 0..(self.nodes.len() - 1) {
+            let tree = ImmutableKdTree::<f64, 3>::new_from_slice(&explicit_layout[node_idx..]);
             let nearest = tree.nearest_n::<SquaredEuclidean>(&explicit_layout[node_idx], n_neigh);
-            assert!(nearest.len() != 0);
-            let nearest_idx = nearest[0].item as usize;
+            assert!(nearest.len() > 1);
+            let nearest_idx = node_idx + nearest[1].item as usize;
             self.edges.push(Edge {
                 begin: node_idx,
                 end: nearest_idx,
-                distance: nearest[0].distance,
+                distance: nearest[1].distance,
             });
             let edge_idx = self.edges.len() - 1;
             self.nodes[node_idx].out_edges.insert(edge_idx);
@@ -123,11 +125,10 @@ impl DiGraph {
             }
             let mut edges_to_remove = FxHashSet::default();
             for edge in self.nodes[node_idx].in_edges.iter() {
-                if self.depth_search(node_idx, min_depth) {
+                if self.depth_search(self.edges[*edge].begin, min_depth) {
                     edges_to_remove.insert(*edge);
                 }
             }
-
             if edges_to_remove.len() > 1 {
                 changed = true;
                 let mut min_dist_edge = 0;
@@ -178,7 +179,7 @@ impl DiGraph {
             }
             return false;
         } else {
-            return false;
+            return true;
         }
     }
 

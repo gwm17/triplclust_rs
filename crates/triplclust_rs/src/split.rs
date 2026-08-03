@@ -5,6 +5,8 @@ use faer;
 use numpy::ndarray::{Array1, ArrayView1, ArrayView2};
 use rustc_hash::FxHashSet;
 
+/// The goal of split is to examine each individual cluster created by triplclust and
+/// attempt to break it into smaller subclusters.
 pub fn split_clusters(
     point_cloud: &ArrayView2<f64>,
     labels: &ArrayView1<i32>,
@@ -17,6 +19,9 @@ pub fn split_clusters(
     };
     let mut new_labels = labels.to_owned();
     for cluster in unique_labels.iter() {
+        if *cluster == -1 {
+            continue;
+        }
         let mut cluster_points = vec![];
         for (idx, label) in labels.iter().enumerate() {
             if label == cluster {
@@ -72,7 +77,6 @@ fn split_cluster(
     if sub_clusters.len() <= 1 {
         return None;
     }
-
     let mut new_labels = vec![current_id; cluster_points.len()];
     for cluster in sub_clusters.into_iter() {
         max_id += 1;

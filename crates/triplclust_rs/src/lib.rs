@@ -72,6 +72,7 @@ mod tests {
 
     use super::*;
     static PRECISION: f64 = 1.0e-4;
+    static HDF5_EVENT_ID: i32 = 38032;
 
     #[test]
     fn full_clustering() {
@@ -134,8 +135,46 @@ mod tests {
             assert!(unique_test_labels.contains(label));
         }
         for (idx, label) in clusters.labels.iter().enumerate() {
-            println!("{}:{} -- {:?}", idx, label, test_labels[idx]);
             assert!(test_labels[idx].contains(label));
         }
+    }
+
+    #[test]
+    fn postprocessing() {
+        let (pointcloud, _) = match utils::test::load_all_hdf5_data(HDF5_EVENT_ID) {
+            Ok(data) => data,
+            Err(e) => {
+                println!("Failed to load data: {}", e);
+                panic!();
+            }
+        };
+        let int_scale = dnn::dnn_first_quartile(&pointcloud.view());
+        let smooth_params = params::SmoothParams {
+            neighborhood_radius: 4.1 * int_scale,
+        };
+        let triplet_params =
+            params::TripletParams::from_fullargs(20, 2, 0.01).expect("Invalid triplet parameters");
+        let cluster_params = params::ClusterParams::from_fullargs(
+            Some(int_scale),
+            Some(0.3),
+            Some(13.0),
+            5,
+            "single",
+        )
+        .expect("Invalid cluster parameters!");
+        let cloud_view = pointcloud.view();
+        let smooth_cloud =
+            smooth::smooth_pointcloud(&cloud_view, &smooth_params).expect("Smoothing failed!");
+        let triplets = triplet::evaluate_triplets(&smooth_cloud.view(), &triplet_params);
+        let rs_clusters = cluster::cluster(smooth_cloud.nrows(), &triplets, &cluster_params)
+            .expect("Clustering failed!");
+        let re_clusters = split::split_clusters(
+            &cloud_view,
+            &rs_clusters.labels.view(),
+            &rs_clusters.unique_labels.view(),
+            25,
+        )
+        .expect("Splitting failed!");
+        assert!(re_clusters.1.len() == 6);
     }
 }
