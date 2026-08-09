@@ -163,12 +163,20 @@ impl ClusterParams {
             None => return Err(ClusterError::InvalidMinClusterSize(mcs))?,
         };
         if let Some(dnn_val) = dnn {
-            Ok(Self {
-                cluster_distance_threshold: cdt,
-                scale: dnn_val / 3.0,
-                min_cluster_size: valid_mcs,
-                linkage: linkage.try_into()?,
-            })
+            match scale {
+                Some(s) => Ok(Self {
+                    cluster_distance_threshold: cdt,
+                    scale: s * dnn_val,
+                    min_cluster_size: valid_mcs,
+                    linkage: linkage.try_into()?,
+                }),
+                None => Ok(Self {
+                    cluster_distance_threshold: cdt,
+                    scale: dnn_val / 3.0,
+                    min_cluster_size: valid_mcs,
+                    linkage: linkage.try_into()?,
+                }),
+            }
         } else {
             match scale {
                 Some(val) => Ok(Self {
