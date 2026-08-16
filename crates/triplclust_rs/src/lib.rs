@@ -72,7 +72,6 @@ mod tests {
 
     use super::*;
     static PRECISION: f64 = 1.0e-4;
-    static HDF5_EVENT_ID: i32 = 38032;
 
     #[test]
     fn full_clustering() {
@@ -141,7 +140,7 @@ mod tests {
 
     #[test]
     fn postprocessing() {
-        let (pointcloud, _) = match utils::test::load_all_hdf5_data(HDF5_EVENT_ID) {
+        let pointcloud = match utils::load_o16_event_pointcloud_data() {
             Ok(data) => data,
             Err(e) => {
                 println!("Failed to load data: {}", e);
@@ -175,6 +174,7 @@ mod tests {
             25,
         )
         .expect("Splitting failed!");
-        assert!(re_clusters.1.len() == 6);
+        // Expect 6 real clusters, one noise
+        assert!(re_clusters.1.len() == 7);
     }
 }

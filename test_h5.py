@@ -13,18 +13,8 @@ EVENT = 41470  # good one
 # EVENT = 38036
 
 
-def load_test_data() -> list[np.ndarray]:
-    file = h5.File("data/o16_data/clusters/run_0054.h5")
-    clusters = []
-    cgroup = file["cluster"][f"event_{EVENT}"]
-    for id in cgroup:
-        clusters.append(cgroup[id]["cloud"][:])
-
-    return clusters
-
-
 def load_test_pc() -> np.ndarray:
-    file = h5.File("data/o16_data/point_clouds/run_0054.h5")
+    file = h5.File("data/run_0054.h5")
     clusters = []
     return file["cloud"][f"cloud_{EVENT}"][:, :3]
 
@@ -38,7 +28,6 @@ def pc2csv(cloud):
 
 
 def main():
-    t_clusters = load_test_data()
     t_pc = load_test_pc()
     t_pc = t_pc[np.argsort(t_pc[:, 2])]
     pc2csv(t_pc)
@@ -78,31 +67,26 @@ def main():
     tc_ulabels = np.unique(tc_labels)
 
     fig, ax = plt.subplots(
-        1, 3, subplot_kw={"projection": "3d"}, constrained_layout=True
+        1, 2, subplot_kw={"projection": "3d"}, constrained_layout=True
     )
 
-    for idx, cluster in enumerate(t_clusters):
-        ax[0].scatter(
-            cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"Spyral Cluster {idx}"
-        )
-    ax[0].legend()
     for label in unique_labels:
         if label == -1:
             continue
         cluster = t_pc[cluster_labels == label]
-        ax[1].scatter(
+        ax[0].scatter(
             cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"RS Cluster {label}"
         )
-    ax[1].legend()
+    ax[0].legend()
 
     for label in tc_ulabels:
         if label == -1:
             continue
         cluster = t_pc[tc_labels == label]
-        ax[2].scatter(
+        ax[1].scatter(
             cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"S-U Cluster {label}"
         )
-    ax[2].legend()
+    ax[1].legend()
     plt.show(block=True)
 
 

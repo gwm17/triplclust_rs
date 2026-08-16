@@ -191,65 +191,16 @@ pub fn load_test_results() -> Result<
     ))
 }
 
-/// Block off HDF5 related stuff
-#[cfg(test)]
-pub mod test {
-    use crate::utils::get_test_data_path;
-    use numpy::ndarray::{Array2, Axis, s};
-    use std::path::Path;
-
-    fn load_hdf5_pointcloud_data(
-        path: &Path,
-        event_id: i32,
-    ) -> Result<Array2<f64>, hdf5_metno::Error> {
-        let handle = hdf5_metno::File::open(path)?;
-        let data: Array2<f64> = handle
-            .group("cloud")?
-            .dataset(&format!("cloud_{}", event_id))?
-            .read_2d()?
-            .slice(s![.., ..3])
-            .to_owned();
-
-        let col = data.column(2);
-        let mut idxs: Vec<usize> = (0..col.len()).collect();
-        idxs.sort_by(|a, b| col[*a].partial_cmp(&col[*b]).unwrap());
-        let sorted = data.select(Axis(0), &idxs);
-        //sort in z
-
-        Ok(sorted)
-    }
-
-    fn load_hdf5_cluster_data(
-        path: &Path,
-        event_id: i32,
-    ) -> Result<Vec<Array2<f64>>, hdf5_metno::Error> {
-        let handle = hdf5_metno::File::open(path)?;
-        let cluster_group = handle
-            .group("cluster")?
-            .group(&format!("event_{}", event_id))?;
-        let mut clusters = vec![];
-        let n_clusters: i32 = cluster_group.attr("nclusters")?.read_scalar()?;
-        for idx in 0..n_clusters {
-            clusters.push(
-                cluster_group
-                    .group(&format!("cluster_{}", idx))?
-                    .dataset("cloud")?
-                    .read_2d::<f64>()?,
-            );
+pub fn load_o16_event_pointcloud_data() -> Result<Array2<f64>, LoadError> {
+    let path = get_test_data_path()?.join("o16_event41470.csv");
+    let data = read_to_string(path)?;
+    let mut cloud = Array2::<f64>::zeros((data.lines().fold(0, |x, _| x + 1), 3));
+    for (ridx, row) in data.lines().enumerate() {
+        let entries = row.split(" ");
+        for (cidx, entry) in entries.enumerate() {
+            cloud[(ridx, cidx)] = entry.parse()?;
         }
-
-        Ok(clusters)
     }
 
-    pub fn load_all_hdf5_data(
-        event_id: i32,
-    ) -> Result<(Array2<f64>, Vec<Array2<f64>>), hdf5_metno::Error> {
-        let test_path = get_test_data_path().expect("No data path given!");
-        let cloud_path = test_path.join("o16_data/point_clouds/run_0054.h5");
-        let cluster_path = test_path.join("o16_data/clusters/run_0054.h5");
-
-        let pc = load_hdf5_pointcloud_data(&cloud_path, event_id)?;
-        let cluster = load_hdf5_cluster_data(&cluster_path, event_id)?;
-        Ok((pc, cluster))
-    }
+    Ok(cloud)
 }
