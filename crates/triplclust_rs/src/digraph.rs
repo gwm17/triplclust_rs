@@ -53,7 +53,6 @@ impl DiGraph {
         self.split_by_weight();
 
         let mut subtrees = vec![];
-
         for root_idx in self.roots.iter() {
             let mut nodes_to_check = VecDeque::new();
             let mut visited_nodes = FxHashSet::<usize>::default();
@@ -100,7 +99,6 @@ impl DiGraph {
             })
             .collect();
         let n_neigh = NonZero::<usize>::new(2).expect("Some how 1 is 0??");
-
         for node_idx in 0..(self.nodes.len() - 1) {
             let tree = ImmutableKdTree::<f64, 3>::new_from_slice(&explicit_layout[node_idx..]);
             let nearest = tree.nearest_n::<SquaredEuclidean>(&explicit_layout[node_idx], n_neigh);
@@ -109,7 +107,7 @@ impl DiGraph {
             self.edges.push(Edge {
                 begin: node_idx,
                 end: nearest_idx,
-                distance: nearest[1].distance,
+                distance: nearest[1].distance.sqrt(),
             });
             let edge_idx = self.edges.len() - 1;
             self.nodes[node_idx].out_edges.insert(edge_idx);
@@ -131,7 +129,7 @@ impl DiGraph {
             }
             if edges_to_remove.len() > 1 {
                 changed = true;
-                let mut min_dist_edge = 0;
+                let mut min_dist_edge = self.edges.len() + 1;
                 let mut min_dist = f64::INFINITY;
                 for edge in edges_to_remove.iter() {
                     if self.edges[*edge].distance < min_dist {

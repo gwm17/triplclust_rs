@@ -7,8 +7,10 @@ from triplclust_py import (
     split_clusters,
 )
 import matplotlib.pyplot as plt
+from tripclust import tripclust
 
-EVENT = 40037
+EVENT = 41470  # good one
+# EVENT = 38036
 
 
 def load_test_data() -> list[np.ndarray]:
@@ -40,6 +42,7 @@ def main():
     t_pc = load_test_pc()
     t_pc = t_pc[np.argsort(t_pc[:, 2])]
     pc2csv(t_pc)
+    print("------------RUST-----------")
     dnn = calculate_dnn(t_pc)
     smooth_cloud = smooth_pointcloud(t_pc, dnn, 4.1)
     cluster_labels, unique_labels = triplet_clustering(
@@ -48,15 +51,39 @@ def main():
     cluster_labels, unique_labels = split_clusters(
         t_pc, cluster_labels, unique_labels, 25
     )
+    print("---------C++---------------")
+
+    tc = tripclust()
+    tc.set_r(4.1)
+    tc.set_rdnn(True)
+    tc.set_k(20)
+    tc.set_n(2)
+    tc.set_a(0.01)
+    tc.set_s(0.3)
+    tc.set_sdnn(True)
+    tc.set_t(13.0)
+    tc.set_tauto(False)
+    tc.set_dmax(0.0)
+    tc.set_dmax_dnn(False)
+    tc.set_ordered(True)
+    # tc.set_link(params.tripclust_parameters.link)
+    tc.set_m(5)
+    tc.set_postprocess(True)
+    tc.set_min_depth(25)
+
+    # Perform tripclust (Dalitz) clustering
+    tc.fill_pointcloud(t_pc)
+    tc.perform_clustering()
+    tc_labels: np.ndarray = tc.get_labels()
+    tc_ulabels = np.unique(tc_labels)
 
     fig, ax = plt.subplots(
         1, 3, subplot_kw={"projection": "3d"}, constrained_layout=True
     )
 
-    ax[2].scatter(t_pc[:, 0], t_pc[:, 1], t_pc[:, 2])
     for idx, cluster in enumerate(t_clusters):
         ax[0].scatter(
-            cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"Cluster {idx}"
+            cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"Spyral Cluster {idx}"
         )
     ax[0].legend()
     for label in unique_labels:
@@ -67,6 +94,15 @@ def main():
             cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"RS Cluster {label}"
         )
     ax[1].legend()
+
+    for label in tc_ulabels:
+        if label == -1:
+            continue
+        cluster = t_pc[tc_labels == label]
+        ax[2].scatter(
+            cluster[:, 0], cluster[:, 1], cluster[:, 2], label=f"S-U Cluster {label}"
+        )
+    ax[2].legend()
     plt.show(block=True)
 
 

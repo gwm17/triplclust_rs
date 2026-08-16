@@ -101,6 +101,7 @@ fn correct_over_segmentation(
     let tolerance = 10;
     let mut cluster_to_join: Option<(usize, usize)> = None;
     let mut min_cluster_dist: f64;
+    let mut max_distance = 10.0;
     while sub_clusters.len() > 1 && c_count < sub_clusters.len() {
         c_count = 0;
         for (orig_idx, cluster) in sub_clusters.iter().enumerate() {
@@ -119,10 +120,13 @@ fn correct_over_segmentation(
                     return None;
                 }
             };
+            for _ in 0..cloud.nrows() {
+                max_distance += ols_distance(a.as_ref(), b.as_ref(), cloud.row(0));
+            }
 
-            // Original was different here... did mean of same value multiplied by 20?
-            // No idea where the 20.0 comes from
-            let max_distance = 20.0 * ols_distance(a.as_ref(), b.as_ref(), cloud.row(0));
+            max_distance =
+                20.0 * max_distance / (((cluster.len() - 1) - (cluster.len() * 3 / 4)) as f64);
+
             for (comp_idx, comp_cluster) in sub_clusters.iter().enumerate() {
                 if comp_idx == orig_idx
                     || (cluster.last().expect("cluster has no points?") + tolerance)
@@ -148,16 +152,24 @@ fn correct_over_segmentation(
         match &cluster_to_join {
             Some((origin, join)) => {
                 let mut joiner = sub_clusters[*join].clone();
-                sub_clusters[*origin].append(&mut joiner);
-                sub_clusters[*origin].sort();
+                let mut acceptor = sub_clusters[*origin].clone();
+                if joiner.first().unwrap() > acceptor.first().unwrap() {
+                    acceptor.append(&mut joiner);
+                    sub_clusters[*origin] = acceptor;
+                } else {
+                    joiner.append(&mut acceptor);
+                    sub_clusters[*origin] = joiner;
+                }
+                // sub_clusters[*origin].append(&mut joiner);
+                // sub_clusters[*origin].sort();
                 // As part of the original impl, the first cluster is unique
                 // So we maintain that if it is absorbed in another cluster,
                 // that cluster becomes the first in the set...
                 // What first really means here is unclear though. It may make more
                 // sense to sort on leading indicies...
-                if *join == 0 {
-                    sub_clusters.rotate_left(*join);
-                }
+                // if *join == 0 {
+                //     sub_clusters.rotate_left(*join);
+                // }
                 sub_clusters.remove(*join);
             }
             None => (),
@@ -244,6 +256,6 @@ fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), 
 }
 
 fn ols_distance(a: faer::ColRef<f64>, b: faer::ColRef<f64>, point: faer::RowRef<f64>) -> f64 {
-    let lambda = b.transpose() * (a - point.transpose());
+    let lambda = b.transpose() * (point.transpose() - a);
     (point - (a + lambda * b).transpose()).norm_l2()
 }
