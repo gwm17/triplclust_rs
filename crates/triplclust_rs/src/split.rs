@@ -54,6 +54,8 @@ pub fn split_clusters(
     Ok((new_labels, new_unique))
 }
 
+/// Split a cluster by forming a directed graph and extracting sub-trees.
+/// Then apply correction algorithms to correct for any over-splitting.
 fn split_cluster(
     point_cloud: &ArrayView2<f64>,
     cluster_points: &[usize],
@@ -88,6 +90,9 @@ fn split_cluster(
     Some(new_labels)
 }
 
+/// Correct for over-splitting by applying a OLS regression to the end of
+/// a sub-cluster and evaluating if any other clusters are aligned to it.
+/// Alignment is determined by evaluating the distance to the regression line.
 fn correct_over_segmentation(
     point_cloud: &ArrayView2<f64>,
     cluster_points: &[usize],
@@ -180,6 +185,9 @@ fn correct_over_segmentation(
     Some(sub_clusters)
 }
 
+/// From the leading cluster, take any points that are aligned to the following clusters
+/// by PCA OLS analysis and re-assign them to those followers.
+/// Not exactly sure what problem this was designed to solve.
 fn expand_start(
     point_cloud: &ArrayView2<f64>,
     cluster_points: &[usize],
@@ -236,6 +244,7 @@ fn expand_start(
     Some(sub_clusters)
 }
 
+/// Ordinary least-squares regression using principal component analysis.
 fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), SplitError> {
     // Calculate column-wise mean
     let mean_point: faer::Col<f64> = data
@@ -255,6 +264,7 @@ fn pca_ols(data: faer::MatRef<f64>) -> Result<(faer::Col<f64>, faer::Col<f64>), 
     return Ok((mean_point, max_component));
 }
 
+/// Distance to OLS regression line
 fn ols_distance(a: faer::ColRef<f64>, b: faer::ColRef<f64>, point: faer::RowRef<f64>) -> f64 {
     let lambda = b.transpose() * (point.transpose() - a);
     (point - (a + lambda * b).transpose()).norm_l2()

@@ -1,3 +1,8 @@
+/// This is a nearly identical implementation of the C++ triplclust digraph system
+/// for splitting clusters. This includes some of the quirks associated with that
+/// implementation.
+///
+/// TODO: Take another pass at this
 use rustc_hash::FxHashSet;
 use std::collections::VecDeque;
 use std::num::NonZero;
@@ -5,28 +10,44 @@ use std::num::NonZero;
 use kiddo::{ImmutableKdTree, SquaredEuclidean};
 use numpy::ndarray::ArrayView2;
 
+/// Definition of a directed, weighted edge
 #[derive(Debug)]
 struct Edge {
+    /// Node the edge starts at
     begin: usize,
+    /// Node the edge ends at
     end: usize,
+    /// Distance between nodes (points); aka the weight
     distance: f64,
 }
 
+/// A node in our graph, aka a point in the cluster
 #[derive(Debug)]
 struct Node {
+    /// Index (i.e. id) of this node
     index: usize,
+    /// Index of this node in the original point cloud
     row: usize,
+    /// Edges flowing into this node
     in_edges: FxHashSet<usize>,
+    /// Edges flowing out of this node
     out_edges: FxHashSet<usize>,
 }
 
+/// Our directed graph implementation
+/// Graphs are a little different in Rust
+/// since we can't use mutable shared references
 pub struct DiGraph {
+    /// The edges, which we id/access by index
     edges: Vec<Edge>,
+    /// The nodes, which we id/access by index
     nodes: Vec<Node>,
+    /// Roots of sub-graphs identified by our algorithms
     roots: Vec<usize>,
 }
 
 impl DiGraph {
+    /// Create the graph and populate all of the nodes and edges.
     pub fn new(point_cloud: &ArrayView2<f64>, graph_points: &[usize]) -> Self {
         let mut digraph = Self {
             edges: vec![],
@@ -46,6 +67,7 @@ impl DiGraph {
         digraph
     }
 
+    /// Ask the graph to split the cluster into sub-trees.
     pub fn split_into_subtrees(&mut self, min_depth: usize) -> Option<Vec<Vec<usize>>> {
         if !self.split_by_depth(min_depth) {
             return None;
@@ -86,6 +108,12 @@ impl DiGraph {
         return Some(subtrees);
     }
 
+    /// In original code this was called minimum_spanning_tree. Since this is a digraph,
+    /// it's an miniumum_spanning_arboresence, as there is no one single tree. But...
+    /// ours isn't a true digraph, as all edges are really bi-directional...
+    ///
+    /// Either way, the edges are the nearest neighbor which is not at an earlier index
+    /// in the cluster.
     fn miniumum_spanning_arboresence(&mut self, point_cloud: &ArrayView2<f64>) {
         let explicit_layout: Vec<[f64; 3]> = self
             .nodes
@@ -115,6 +143,10 @@ impl DiGraph {
         }
     }
 
+    /// Split the graph into sub-trees by depth. Given a minimum depth,
+    /// do a depth first search for each node and if an edge leads to a path  which
+    /// exceeds min_depth, the node is a sub-tree root and the edge is removed from the
+    /// graph.
     fn split_by_depth(&mut self, min_depth: usize) -> bool {
         let mut changed = false;
         for node_idx in 0..self.nodes.len() {
@@ -150,6 +182,10 @@ impl DiGraph {
         changed
     }
 
+    /// Split the graph into sub-trees by weight. For each node, peform a breadth-first
+    /// search up to depth 4, and calculate the total weight of all edges to that depth.
+    /// Then see if any edge exceeds the non-inclusive average weight of that total. If
+    /// it does, the node is a root of a sub-tree, and the edge is removed from the graph.
     fn split_by_weight(&mut self) {
         for node_idx in 0..self.nodes.len() {
             let (n_nodes, total_distance) = self.total_distance_to_depth4(node_idx);
@@ -168,6 +204,7 @@ impl DiGraph {
         }
     }
 
+    /// A depth first search
     fn depth_search(&self, node: usize, depth: usize) -> bool {
         if depth > 0 {
             for edge in self.nodes[node].in_edges.iter() {
@@ -181,6 +218,7 @@ impl DiGraph {
         }
     }
 
+    /// Get the total weight of all edges to depth 4.
     fn total_distance_to_depth4(&self, node: usize) -> (usize, f64) {
         let mut n_nodes = 0;
         let mut total_distance = 0.0;

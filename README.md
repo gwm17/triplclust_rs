@@ -14,7 +14,8 @@ hierarchical clustering algorithm outlined in
 > 3D Point Clouds." Image Processing Online 9, pp. 26-46 (2019).
 > https://doi.org/10.5201/ipol.2019.234
 
-used by AT-TPC, with Python bindings using pyo3.
+used by AT-TPC, with Python bindings using pyo3. It also includes the optional
+post-processing algorithm to correct for over-clustering.
 
 ## Requirements
 
