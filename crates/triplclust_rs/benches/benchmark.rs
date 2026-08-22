@@ -14,11 +14,9 @@ fn load_data_and_params() -> (Array2<f64>, SmoothParams, TripletParams, ClusterP
         }
     };
     let int_scale = dnn_first_quartile(&test_point_cloud.view());
-    let smooth_params = SmoothParams::default_with_dnn(int_scale);
-    let triplet_params =
-        TripletParams::from_fullargs(19, 2, 0.03).expect("Invalid triplet parameters");
-    let cluster_params =
-        ClusterParams::default_with_dnn(int_scale, "single").expect("Invalid cluster parameters");
+    let smooth_params = SmoothParams::default(int_scale);
+    let triplet_params = TripletParams::new(19, 2, 0.03).expect("Invalid triplet parameters");
+    let cluster_params = ClusterParams::default(int_scale);
     (
         test_point_cloud,
         smooth_params,

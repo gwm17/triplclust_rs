@@ -101,12 +101,11 @@ mod tests {
 
         let int_scale = dnn::dnn_first_quartile(&test_point_cloud.view());
         assert!((test_dnn - int_scale).abs() < PRECISION);
-        let smooth_params = params::SmoothParams::default_with_dnn(int_scale);
+        let smooth_params = params::SmoothParams::default(int_scale);
         assert!((test_radius - smooth_params.neighborhood_radius).abs() < PRECISION);
         let triplet_params =
-            params::TripletParams::from_fullargs(19, 2, 0.03).expect("Invalid triplet parameters");
-        let cluster_params = params::ClusterParams::default_with_dnn(int_scale, "single")
-            .expect("Invalid cluster parameters!");
+            params::TripletParams::new(19, 2, 0.03).expect("Invalid triplet parameters");
+        let cluster_params = params::ClusterParams::default(int_scale);
         assert!((test_scale - cluster_params.scale).abs() < PRECISION);
 
         let cloud_view = test_point_cloud.view();
@@ -152,15 +151,10 @@ mod tests {
             neighborhood_radius: 4.1 * int_scale,
         };
         let triplet_params =
-            params::TripletParams::from_fullargs(20, 2, 0.01).expect("Invalid triplet parameters");
-        let cluster_params = params::ClusterParams::from_fullargs(
-            Some(int_scale),
-            Some(0.3),
-            Some(13.0),
-            5,
-            "single",
-        )
-        .expect("Invalid cluster parameters!");
+            params::TripletParams::new(20, 2, 0.01).expect("Invalid triplet parameters");
+        let cluster_params =
+            params::ClusterParams::new(Some(int_scale), 0.3, Some(13.0), 5, "single")
+                .expect("Invalid cluster parameters!");
         let cloud_view = pointcloud.view();
         let smooth_cloud =
             smooth::smooth_pointcloud(&cloud_view, &smooth_params).expect("Smoothing failed!");

@@ -16,66 +16,56 @@ pub fn calculate_dnn<'py>(_py: Python<'py>, cloud: PyReadonlyArray2<f64>) -> f64
 }
 
 #[pyfunction]
+#[pyo3(signature = (cloud, dnn, neighborhood_radius = 2.0))]
 pub fn smooth_pointcloud<'py>(
     py: Python<'py>,
     cloud: PyReadonlyArray2<f64>,
     dnn: Option<f64>,
-    neighborhood_radius: Option<f64>,
+    neighborhood_radius: f64,
 ) -> Result<Bound<'py, PyArray2<f64>>, PyTriplclustError> {
-    let params = match dnn {
-        Some(val) => match neighborhood_radius {
-            Some(scale) => SmoothParams {
-                neighborhood_radius: val * scale,
-            },
-            None => SmoothParams::default_with_dnn(val),
-        },
-        None => match neighborhood_radius {
-            Some(nval) => SmoothParams {
-                neighborhood_radius: nval,
-            },
-            None => SmoothParams::default_with_dnn(dnn_first_quartile(&cloud.as_array())),
-        },
-    };
+    let params = SmoothParams::new(neighborhood_radius, dnn);
     let smoothed = rs_smooth_pointcloud(&cloud.as_array(), &params)?;
     Ok(smoothed.to_pyarray(py))
 }
 
 #[pyfunction]
+#[pyo3(signature = (
+        smoothed_point_cloud,
+        dnn,
+        triplet_neighborhood_size=19,
+        triplet_max_candidates=2,
+        triplet_error_cutoff=0.03,
+        cluster_scale=0.3,
+        min_cluster_size=5,
+        linkage="single",
+        cluster_distance_threshold=None
+    )
+)]
 pub fn triplet_clustering<'py>(
     py: Python<'py>,
     smoothed_point_cloud: PyReadonlyArray2<f64>,
+    dnn: Option<f64>,
     triplet_neighborhood_size: i32,
     triplet_max_candidates: i32,
     triplet_error_cutoff: f64,
-    dnn: Option<f64>,
-    cluster_distance_threshold: Option<f64>,
-    cluster_scale: Option<f64>,
+    cluster_scale: f64,
     min_cluster_size: i32,
     linkage: &str,
+    cluster_distance_threshold: Option<f64>,
 ) -> Result<(Bound<'py, PyArray1<i32>>, Bound<'py, PyArray1<i32>>), PyTriplclustError> {
-    let triplet_params = TripletParams::from_fullargs(
+    let triplet_params = TripletParams::new(
         triplet_neighborhood_size,
         triplet_max_candidates,
         triplet_error_cutoff,
     )?;
 
-    let cluster_params = if dnn.is_none() {
-        ClusterParams::from_fullargs(
-            Some(dnn_first_quartile(&smoothed_point_cloud.as_array())),
-            cluster_scale,
-            cluster_distance_threshold,
-            min_cluster_size,
-            linkage,
-        )?
-    } else {
-        ClusterParams::from_fullargs(
-            dnn,
-            cluster_scale,
-            cluster_distance_threshold,
-            min_cluster_size,
-            linkage,
-        )?
-    };
+    let cluster_params = ClusterParams::new(
+        dnn,
+        cluster_scale,
+        cluster_distance_threshold,
+        min_cluster_size,
+        linkage,
+    )?;
     let cloud_array = smoothed_point_cloud.as_array();
     let triplets = evaluate_triplets(&cloud_array, &triplet_params);
     let result = cluster(cloud_array.nrows(), &triplets, &cluster_params)?;
@@ -87,6 +77,7 @@ pub fn triplet_clustering<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (point_cloud, labels, unqiue_labels, min_depth=25))]
 pub fn split_clusters<'py>(
     py: Python<'py>,
     point_cloud: PyReadonlyArray2<f64>,
