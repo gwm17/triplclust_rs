@@ -58,10 +58,12 @@
 //! Benchmarks are run using the [criterion](https://docs.rs/criterion) crate.
 
 pub mod cluster;
+pub mod digraph;
 pub mod dnn;
 pub mod error;
 pub mod params;
 pub mod smooth;
+pub mod split;
 pub mod triplet;
 pub mod utils;
 
@@ -99,12 +101,11 @@ mod tests {
 
         let int_scale = dnn::dnn_first_quartile(&test_point_cloud.view());
         assert!((test_dnn - int_scale).abs() < PRECISION);
-        let smooth_params = params::SmoothParams::default_with_dnn(int_scale);
+        let smooth_params = params::SmoothParams::default(int_scale);
         assert!((test_radius - smooth_params.neighborhood_radius).abs() < PRECISION);
         let triplet_params =
-            params::TripletParams::from_fullargs(19, 2, 0.03).expect("Invalid triplet parameters");
-        let cluster_params = params::ClusterParams::default_with_dnn(int_scale, "single")
-            .expect("Invalid cluster parameters!");
+            params::TripletParams::new(19, 2, 0.03).expect("Invalid triplet parameters");
+        let cluster_params = params::ClusterParams::default(int_scale);
         assert!((test_scale - cluster_params.scale).abs() < PRECISION);
 
         let cloud_view = test_point_cloud.view();
@@ -132,8 +133,42 @@ mod tests {
             assert!(unique_test_labels.contains(label));
         }
         for (idx, label) in clusters.labels.iter().enumerate() {
-            println!("{}:{} -- {:?}", idx, label, test_labels[idx]);
             assert!(test_labels[idx].contains(label));
         }
+    }
+
+    #[test]
+    fn postprocessing() {
+        let pointcloud = match utils::load_o16_event_pointcloud_data() {
+            Ok(data) => data,
+            Err(e) => {
+                println!("Failed to load data: {}", e);
+                panic!();
+            }
+        };
+        let int_scale = dnn::dnn_first_quartile(&pointcloud.view());
+        let smooth_params = params::SmoothParams {
+            neighborhood_radius: 4.1 * int_scale,
+        };
+        let triplet_params =
+            params::TripletParams::new(20, 2, 0.01).expect("Invalid triplet parameters");
+        let cluster_params =
+            params::ClusterParams::new(Some(int_scale), 0.3, Some(13.0), 5, "single")
+                .expect("Invalid cluster parameters!");
+        let cloud_view = pointcloud.view();
+        let smooth_cloud =
+            smooth::smooth_pointcloud(&cloud_view, &smooth_params).expect("Smoothing failed!");
+        let triplets = triplet::evaluate_triplets(&smooth_cloud.view(), &triplet_params);
+        let rs_clusters = cluster::cluster(smooth_cloud.nrows(), &triplets, &cluster_params)
+            .expect("Clustering failed!");
+        let re_clusters = split::split_clusters(
+            &cloud_view,
+            &rs_clusters.labels.view(),
+            &rs_clusters.unique_labels.view(),
+            25,
+        )
+        .expect("Splitting failed!");
+        // Expect 6 real clusters, one noise
+        assert!(re_clusters.1.len() == 7);
     }
 }

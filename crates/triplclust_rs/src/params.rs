@@ -26,9 +26,18 @@ impl SmoothParams {
     /// Create a default set of parameters from a given value
     /// of the intrinsic length scale dNN
     /// neighborhood_radius = 2.0 * dNN
-    pub fn default_with_dnn(dnn: f64) -> Self {
+    pub fn default(dnn: f64) -> Self {
         Self {
             neighborhood_radius: dnn * 2.0,
+        }
+    }
+
+    pub fn new(radius: f64, dnn: Option<f64>) -> Self {
+        Self {
+            neighborhood_radius: match dnn {
+                Some(dnn) => radius * dnn,
+                None => radius,
+            },
         }
     }
 }
@@ -60,8 +69,7 @@ impl Default for TripletParams {
 }
 
 impl TripletParams {
-    /// Helper function for creating parameters when marshalling from Python
-    pub fn from_fullargs(n_size: i32, max_c: i32, e_c: f64) -> Result<Self, TriplclustError> {
+    pub fn new(n_size: i32, max_c: i32, e_c: f64) -> Result<Self, TriplclustError> {
         let valid_n_size = match validate_i32_to_nonzero_usize(n_size) {
             Some(val) => val,
             None => return Err(TripletError::InvalidNeighborhoodSize(n_size).into()),
@@ -135,25 +143,25 @@ pub struct ClusterParams {
 
 impl ClusterParams {
     /// Create a default set of clustering parameters from a value for the intrisinc
-    /// length scale dNN and a Linkage string
+    /// length scale dNN
     /// cluster_distance_threshold = None
     /// scale = dNN * 0.3 -- Note this matches the triplclust *code* but not the *paper*
     /// min_cluster_size = 5
-    /// linkage = Linkage::from(string)
-    pub fn default_with_dnn(dnn: f64, linkage: &str) -> Result<Self, TriplclustError> {
-        Ok(Self {
+    /// linkage = Linkage::Single
+    pub fn default(dnn: f64) -> Self {
+        Self {
             cluster_distance_threshold: None,
             scale: dnn * 0.3,
             min_cluster_size: 5,
-            linkage: linkage.try_into()?,
-        })
+            linkage: Linkage::Single,
+        }
     }
 
-    /// Helper function to marshall a full set of Python arguments into
-    /// Rust parameters
-    pub fn from_fullargs(
+    /// Create the parameters to triplclust. If dnn is given,
+    /// multiply the the cluster scale by dnn.
+    pub fn new(
         dnn: Option<f64>,
-        scale: Option<f64>,
+        scale: f64,
         cdt: Option<f64>,
         mcs: i32,
         linkage: &str,
@@ -162,23 +170,19 @@ impl ClusterParams {
             Some(val) => val.get(),
             None => return Err(ClusterError::InvalidMinClusterSize(mcs))?,
         };
-        if let Some(dnn_val) = dnn {
-            Ok(Self {
+        match dnn {
+            Some(dnn) => Ok(Self {
                 cluster_distance_threshold: cdt,
-                scale: dnn_val / 3.0,
+                scale: scale * dnn,
                 min_cluster_size: valid_mcs,
                 linkage: linkage.try_into()?,
-            })
-        } else {
-            match scale {
-                Some(val) => Ok(Self {
-                    cluster_distance_threshold: cdt,
-                    scale: val,
-                    min_cluster_size: valid_mcs,
-                    linkage: linkage.try_into()?,
-                }),
-                None => Err(ClusterError::InvalidArguments)?,
-            }
+            }),
+            None => Ok(Self {
+                cluster_distance_threshold: cdt,
+                scale: scale,
+                min_cluster_size: valid_mcs,
+                linkage: linkage.try_into()?,
+            }),
         }
     }
 }

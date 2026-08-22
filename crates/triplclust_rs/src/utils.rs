@@ -7,7 +7,6 @@ use std::env::var;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum LoadError {
     FailedIO(std::io::Error),
@@ -60,7 +59,6 @@ impl std::fmt::Display for LoadError {
 
 impl std::error::Error for LoadError {}
 
-#[allow(dead_code)]
 pub fn get_test_data_path() -> Result<PathBuf, LoadError> {
     let manifest: PathBuf = var("CARGO_MANIFEST_DIR")?.into();
     let crates_path = manifest.parent().expect("Cargo manifest has no parent?");
@@ -68,7 +66,6 @@ pub fn get_test_data_path() -> Result<PathBuf, LoadError> {
     Ok(workspace_root.join("data"))
 }
 
-#[allow(dead_code)]
 pub fn load_cloud_from_dat(path: &Path) -> Result<Array2<f64>, LoadError> {
     let data = read_to_string(path)?;
     let mut cloud = Array2::<f64>::zeros((data.lines().fold(0, |x, _| x + 1) - 3, 3));
@@ -85,13 +82,11 @@ pub fn load_cloud_from_dat(path: &Path) -> Result<Array2<f64>, LoadError> {
     Ok(cloud)
 }
 
-#[allow(dead_code)]
 pub fn load_test_data() -> Result<Array2<f64>, LoadError> {
     let path = get_test_data_path()?.join("test.dat");
     load_cloud_from_dat(&path)
 }
 
-#[allow(dead_code)]
 pub fn load_cdist_data() -> Result<Array1<f64>, LoadError> {
     let path = get_test_data_path()?.join("debug_cdist.csv");
     let data = read_to_string(path)?;
@@ -102,7 +97,6 @@ pub fn load_cdist_data() -> Result<Array1<f64>, LoadError> {
     Ok(array)
 }
 
-#[allow(dead_code)]
 pub fn load_test_results() -> Result<
     (
         f64,
@@ -195,4 +189,18 @@ pub fn load_test_results() -> Result<
         results_labels,
         unique_labels,
     ))
+}
+
+pub fn load_o16_event_pointcloud_data() -> Result<Array2<f64>, LoadError> {
+    let path = get_test_data_path()?.join("o16_event41470.csv");
+    let data = read_to_string(path)?;
+    let mut cloud = Array2::<f64>::zeros((data.lines().fold(0, |x, _| x + 1), 3));
+    for (ridx, row) in data.lines().enumerate() {
+        let entries = row.split(" ");
+        for (cidx, entry) in entries.enumerate() {
+            cloud[(ridx, cidx)] = entry.parse()?;
+        }
+    }
+
+    Ok(cloud)
 }

@@ -14,6 +14,8 @@ rather than the details of the algorithm. You can see the paper for details on t
 as well as the `triplclust_rs` documentation for any changes relative to the original
 implementation.
 
+It also contains the post-processing algorithm for correcting for over-clustering.
+
 ## Requirements
 
 Python >= 3.8 for most Linux, MacOS
@@ -39,7 +41,7 @@ If there is not, you will also need the Rust compiler tool chain, which you can 
 Generally, using `triplclust_py` is very simple. Your code will look something like:
 
 ```python
-from triplclust_py import smooth_pointcloud, calculate_dnn, triplet_clustering
+from triplclust_py import smooth_pointcloud, calculate_dnn, triplet_clustering, split_clusters
 
 # data in this case is a  Nx(3 or greater) numpy array representing a point cloud
 # The first 3 columns should be (x,y,z) coordinates
@@ -51,6 +53,10 @@ cluster_labels, unique_labels = triplet_clustering(
 # cluster_labels is a length N numpy array of integer labels for each point
 # in the point cloud. unique_labels is an array containing the unique label values
 
+# Conditionally do post-processing to correct for over-clustering
+if postprocess:
+    cluster_labels, unique_labels = split_clusters(data, cluster_labels, unique_labels, 25)
+
 # Do some stuff here with the results...
 ```
 
@@ -59,4 +65,5 @@ For details on the parameters and return values see the [API](api.md) documentat
 ## Performance considerations
 
 Currently, `triplclust_rs` is benchmarked, however, `triplclust_py` is not. Eventually,
-this will be setup to ensure `triplclust_py` does not impose significant overhead.
+this will be setup to ensure `triplclust_py` does not impose significant overhead. Post-processing
+is not benchmarked at all currently.
