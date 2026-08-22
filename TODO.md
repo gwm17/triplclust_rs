@@ -1,4 +1,4 @@
 # TODO
 
-- Parameters which use dNN should be able to individually turn dNN scaling on and off
-- Document post-processing
+- Evaluate a simpler graph system (petgraph)
+- Weighted UnGraph instead of DiGraph.
