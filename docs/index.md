@@ -46,9 +46,9 @@ from triplclust_py import smooth_pointcloud, calculate_dnn, triplet_clustering, 
 # data in this case is a  Nx(3 or greater) numpy array representing a point cloud
 # The first 3 columns should be (x,y,z) coordinates
 dnn = calculate_dnn(data)
-smooth_cloud = smooth_pointcloud(data, dnn, None)
+smooth_cloud = smooth_pointcloud(data, dnn, 2.0)
 cluster_labels, unique_labels = triplet_clustering(
-    smooth_cloud, 19, 2, 0.03, dnn, None, None, 5, "single"
+    smooth_cloud, dnn, 19, 2, 0.03, 0.3, 5, "single"
 )
 # cluster_labels is a length N numpy array of integer labels for each point
 # in the point cloud. unique_labels is an array containing the unique label values
